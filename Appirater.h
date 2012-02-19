@@ -44,11 +44,6 @@ extern NSString *const kAppiraterRatedCurrentVersion;
 extern NSString *const kAppiraterDeclinedToRate;
 
 /*
- Place your Apple generated software id here.
- */
-#define APPIRATER_APP_ID				301377083
-
-/*
  Your app's name.
  */
 #define APPIRATER_APP_NAME				[[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey]
@@ -131,14 +126,6 @@ extern NSString *const kAppiraterDeclinedToRate;
 @property(nonatomic, retain) UIAlertView *ratingAlert;
 
 /*
- DEPRECATED: While still functional, it's better to use
- appLaunched:(BOOL)canPromptForRating instead.
- 
- Calls [Appirater appLaunched:YES]. See appLaunched: for details of functionality.
- */
-+ (void)appLaunched;
-
-/*
  Tells Appirater that the app has launched, and on devices that do NOT
  support multitasking, the 'uses' count will be incremented. You should
  call this method at the end of your application delegate's
@@ -151,8 +138,7 @@ extern NSString *const kAppiraterDeclinedToRate;
  can also be triggered by appEnteredForeground: and userDidSignificantEvent:
  (as long as you pass YES for canPromptForRating in those methods).
  */
-+ (void)appLaunched:(BOOL)canPromptForRating;
-
++ (void)appLaunchedWithAppStoreID:(int)appID canPromptForRating:(BOOL)canPromptForRating;
 /*
  Tells Appirater that the app was brought to the foreground on multitasking
  devices. You should call this method from the application delegate's
