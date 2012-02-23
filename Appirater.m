@@ -31,7 +31,7 @@
  *
  * Created by Arash Payan on 9/5/09.
  * http://arashpayan.com
- * Copyright 2010 Arash Payan. All rights reserved.
+ * Copyright 2012 Arash Payan. All rights reserved.
  */
 
 #import "Appirater.h"
@@ -48,16 +48,18 @@ NSString *const kAppiraterReminderRequestDate		= @"kAppiraterReminderRequestDate
 
 NSString *templateReviewURL = @"itms-apps://ax.itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?type=Purple+Software&id=APP_ID";
 
-
-@interface Appirater (hidden)
+@interface Appirater ()
 - (BOOL)connectedToNetwork;
 + (Appirater*)sharedInstance;
 - (void)showRatingAlert;
 - (BOOL)ratingConditionsHaveBeenMet;
 - (void)incrementUseCount;
+- (void)hideRatingAlert;
 @end
 
-@implementation Appirater (hidden)
+@implementation Appirater 
+
+@synthesize ratingAlert;
 
 - (BOOL)connectedToNetwork {
     // Create zero addy
@@ -94,23 +96,23 @@ NSString *templateReviewURL = @"itms-apps://ax.itunes.apple.com/WebObjects/MZSto
 	static Appirater *appirater = nil;
 	if (appirater == nil)
 	{
-		@synchronized(self) {
-			if (appirater == nil) {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
 				appirater = [[Appirater alloc] init];
-                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appWillResignActive) name:@"UIApplicationWillResignActiveNotification" object:nil];
-            }
-        }
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appWillResignActive) name:
+                UIApplicationWillResignActiveNotification object:nil];
+        });
 	}
 	
 	return appirater;
 }
 
 - (void)showRatingAlert {
-	UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:APPIRATER_MESSAGE_TITLE
+	UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:APPIRATER_MESSAGE_TITLE
 														 message:APPIRATER_MESSAGE
 														delegate:self
 											   cancelButtonTitle:APPIRATER_CANCEL_BUTTON
-											   otherButtonTitles:APPIRATER_RATE_BUTTON, APPIRATER_RATE_LATER, nil];
+											   otherButtonTitles:APPIRATER_RATE_BUTTON, APPIRATER_RATE_LATER, nil] autorelease];
 	self.ratingAlert = alertView;
 	[alertView show];
 }
@@ -251,52 +253,43 @@ NSString *templateReviewURL = @"itms-apps://ax.itunes.apple.com/WebObjects/MZSto
 	[userDefaults synchronize];
 }
 
-@end
-
-
-@interface Appirater ()
-- (void)hideRatingAlert;
-@end
-
-@implementation Appirater
-
-@synthesize ratingAlert;
-
-- (void)incrementAndRate:(NSNumber*)_canPromptForRating {
-	@autoreleasepool {
-		[self incrementUseCount];
+- (void)incrementAndRate:(BOOL)canPromptForRating {
+	[self incrementUseCount];
 	
-		if ([_canPromptForRating boolValue] == YES &&
-			[self ratingConditionsHaveBeenMet] &&
-			[self connectedToNetwork])
-		{
-			[self performSelectorOnMainThread:@selector(showRatingAlert) withObject:nil waitUntilDone:NO];
-		}
+	if (canPromptForRating &&
+		[self ratingConditionsHaveBeenMet] &&
+		[self connectedToNetwork])
+	{
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+                           [self showRatingAlert];
+                       });
 	}
 }
 
-- (void)incrementSignificantEventAndRate:(NSNumber*)_canPromptForRating {
-	@autoreleasepool {
-		[self incrementSignificantEventCount];
-		
-		if ([_canPromptForRating boolValue] == YES &&
-			[self ratingConditionsHaveBeenMet] &&
-			[self connectedToNetwork])
-		{
-			[self performSelectorOnMainThread:@selector(showRatingAlert) withObject:nil waitUntilDone:NO];
-		}
+- (void)incrementSignificantEventAndRate:(BOOL)canPromptForRating {
+	[self incrementSignificantEventCount];
+	
+	if (canPromptForRating &&
+		[self ratingConditionsHaveBeenMet] &&
+		[self connectedToNetwork])
+	{
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+                           [self showRatingAlert];
+                       });
 	}
 }
 
-static int appID;
++ (void)appLaunched {
+	[Appirater appLaunched:YES];
+}
 
-+ (void)appLaunchedWithAppStoreID:(int)anAppID canPromptForRating:(BOOL)canPromptForRating {
-	appID = anAppID;
-	
-	NSNumber *_canPromptForRating = [[NSNumber alloc] initWithBool:canPromptForRating];
-	[NSThread detachNewThreadSelector:@selector(incrementAndRate:)
-							 toTarget:[Appirater sharedInstance]
-						   withObject:_canPromptForRating];
++ (void)appLaunched:(BOOL)canPromptForRating {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0),
+                   ^{
+                       [[Appirater sharedInstance] incrementAndRate:canPromptForRating];
+                   });
 }
 
 - (void)hideRatingAlert {
@@ -314,17 +307,17 @@ static int appID;
 }
 
 + (void)appEnteredForeground:(BOOL)canPromptForRating {
-	NSNumber *_canPromptForRating = [[NSNumber alloc] initWithBool:canPromptForRating];
-	[NSThread detachNewThreadSelector:@selector(incrementAndRate:)
-							 toTarget:[Appirater sharedInstance]
-						   withObject:_canPromptForRating];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0),
+                   ^{
+                       [[Appirater sharedInstance] incrementAndRate:canPromptForRating];
+                   });
 }
 
 + (void)userDidSignificantEvent:(BOOL)canPromptForRating {
-	NSNumber *_canPromptForRating = [[NSNumber alloc] initWithBool:canPromptForRating];
-	[NSThread detachNewThreadSelector:@selector(incrementSignificantEventAndRate:)
-							 toTarget:[Appirater sharedInstance]
-						   withObject:_canPromptForRating];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0),
+                   ^{
+                       [[Appirater sharedInstance] incrementSignificantEventAndRate:canPromptForRating];
+                   });
 }
 
 + (void)rateApp {
@@ -332,7 +325,7 @@ static int appID;
 	NSLog(@"APPIRATER NOTE: iTunes App Store is not supported on the iOS simulator. Unable to open App Store page.");
 #else
 	NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-	NSString *reviewURL = [templateReviewURL stringByReplacingOccurrencesOfString:@"APP_ID" withString:[NSString stringWithFormat:@"%d", appID]];
+	NSString *reviewURL = [templateReviewURL stringByReplacingOccurrencesOfString:@"APP_ID" withString:[NSString stringWithFormat:@"%d", APPIRATER_APP_ID]];
 	[userDefaults setBool:YES forKey:kAppiraterRatedCurrentVersion];
 	[userDefaults synchronize];
 	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:reviewURL]];
