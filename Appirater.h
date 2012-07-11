@@ -45,14 +45,10 @@ extern NSString *const kAppiraterDeclinedToRate;
 extern NSString *const kAppiraterReminderRequestDate;
 
 /*
- Your localized app's name.
- */
-#define APPIRATER_LOCALIZED_APP_NAME    [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:(NSString *)kCFBundleNameKey]
-
-/*
  Your app's name.
  */
-#define APPIRATER_APP_NAME               APPIRATER_LOCALIZED_APP_NAME ? APPIRATER_LOCALIZED_APP_NAME : [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey]
+// TODO: Pass this in rather than have it static
+#define APPIRATER_APP_NAME               @"Mix & Mash"
 
 /*
  This is the message your users will see once they've passed the day+launches
@@ -125,7 +121,7 @@ extern NSString *const kAppiraterReminderRequestDate;
  'YES' will show the Appirater alert everytime. Useful for testing how your message
  looks and making sure the link to your app's review page works.
  */
-#define APPIRATER_DEBUG                YES
+#define APPIRATER_DEBUG                NO
 
 @interface Appirater : NSObject <UIAlertViewDelegate>
 {
@@ -135,13 +131,6 @@ extern NSString *const kAppiraterReminderRequestDate;
 
 @property (nonatomic, retain) UIAlertView *ratingAlert;
 
-/*
- DEPRECATED: While still functional, it's better to use
- appLaunched:(BOOL)canPromptForRating instead.
- 
- Calls [Appirater appLaunched:YES]. See appLaunched: for details of functionality.
- */
-+ (void)appLaunched;
 
 /*
  Tells Appirater that the app has launched, and on devices that do NOT
