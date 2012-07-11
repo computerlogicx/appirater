@@ -45,9 +45,14 @@ extern NSString *const kAppiraterDeclinedToRate;
 extern NSString *const kAppiraterReminderRequestDate;
 
 /*
+ Your localized app's name.
+ */
+#define APPIRATER_LOCALIZED_APP_NAME    [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:(NSString *)kCFBundleNameKey]
+
+/*
  Your app's name.
  */
-#define APPIRATER_APP_NAME                [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey]
+#define APPIRATER_APP_NAME               APPIRATER_LOCALIZED_APP_NAME ? APPIRATER_LOCALIZED_APP_NAME : [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey]
 
 /*
  This is the message your users will see once they've passed the day+launches
@@ -120,15 +125,23 @@ extern NSString *const kAppiraterReminderRequestDate;
  'YES' will show the Appirater alert everytime. Useful for testing how your message
  looks and making sure the link to your app's review page works.
  */
-#define APPIRATER_DEBUG                NO
+#define APPIRATER_DEBUG                YES
 
 @interface Appirater : NSObject <UIAlertViewDelegate>
 {
-
+    
     UIAlertView *ratingAlert;
 }
 
 @property (nonatomic, retain) UIAlertView *ratingAlert;
+
+/*
+ DEPRECATED: While still functional, it's better to use
+ appLaunched:(BOOL)canPromptForRating instead.
+ 
+ Calls [Appirater appLaunched:YES]. See appLaunched: for details of functionality.
+ */
++ (void)appLaunched;
 
 /*
  Tells Appirater that the app has launched, and on devices that do NOT
@@ -146,17 +159,17 @@ extern NSString *const kAppiraterReminderRequestDate;
 + (void)appLaunchedWithAppStoreID:(int)appID canPromptForRating:(BOOL)canPromptForRating;
 
 /*
-Tells Appirater that the app was brought to the foreground on multitasking
-devices. You should call this method from the application delegate's
-applicationWillEnterForeground: method.
-
-If the app has been used enough to be rated (and enough significant events),
-you can suppress the rating alert
-by passing NO for canPromptForRating. The rating alert will simply be postponed
-until it is called again with YES for canPromptForRating. The rating alert
-can also be triggered by appLaunched: and userDidSignificantEvent:
-(as long as you pass YES for canPromptForRating in those methods).
-*/
+ Tells Appirater that the app was brought to the foreground on multitasking
+ devices. You should call this method from the application delegate's
+ applicationWillEnterForeground: method.
+ 
+ If the app has been used enough to be rated (and enough significant events),
+ you can suppress the rating alert
+ by passing NO for canPromptForRating. The rating alert will simply be postponed
+ until it is called again with YES for canPromptForRating. The rating alert
+ can also be triggered by appLaunched: and userDidSignificantEvent:
+ (as long as you pass YES for canPromptForRating in those methods).
+ */
 + (void)appEnteredForeground:(BOOL)canPromptForRating;
 
 /*
@@ -179,7 +192,7 @@ can also be triggered by appLaunched: and userDidSignificantEvent:
  Tells Appirater to open the App Store page where the user can specify a
  rating for the app. Also records the fact that this has happened, so the
  user won't be prompted again to rate the app.
-
+ 
  The only case where you should call this directly is if your app has an
  explicit "Rate this app" command somewhere.  In all other cases, don't worry
  about calling this -- instead, just call the other functions listed above,
