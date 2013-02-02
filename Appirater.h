@@ -35,6 +35,8 @@
  */
 
 #import <Foundation/Foundation.h>
+#import "AppiraterDelegate.h"
+#import <StoreKit/StoreKit.h>
 
 extern NSString *const kAppiraterFirstUseDate;
 extern NSString *const kAppiraterUseCount;
@@ -47,7 +49,7 @@ extern NSString *const kAppiraterReminderRequestDate;
 /*
  Your localized app's name.
  */
-#define APPIRATER_LOCALIZED_APP_NAME    [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:(NSString *)kCFBundleNameKey]
+#define APPIRATER_LOCALIZED_APP_NAME    [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"]
 
 /*
  Your app's name.
@@ -84,13 +86,17 @@ extern NSString *const kAppiraterReminderRequestDate;
  */
 #define APPIRATER_RATE_LATER			NSLocalizedStringFromTable(@"Remind me later", @"AppiraterLocalizable", nil)
 
-
-@interface Appirater : NSObject <UIAlertViewDelegate> {
+@interface Appirater : NSObject <UIAlertViewDelegate, SKStoreProductViewControllerDelegate> {
 
 	UIAlertView		*ratingAlert;
 }
 
 @property(nonatomic, strong) UIAlertView *ratingAlert;
+#if __has_feature(objc_arc_weak)
+@property(nonatomic, weak) NSObject <AppiraterDelegate> *delegate;
+#else
+@property(nonatomic, unsafe_unretained) NSObject <AppiraterDelegate> *delegate;
+#endif
 
 /*
  Tells Appirater that the app has launched, and on devices that do NOT
@@ -150,6 +156,11 @@ extern NSString *const kAppiraterReminderRequestDate;
  */
 + (void)rateApp;
 
+/*
+ Tells Appirater to immediately close any open rating modals (e.g. StoreKit rating VCs).
+*/
++ (void)closeModal;
+
 @end
 
 @interface Appirater(Configuration)
@@ -183,7 +194,7 @@ extern NSString *const kAppiraterReminderRequestDate;
  In a game, it might be beating a level or a boss. This is just another
  layer of filtering that can be used to make sure that only the most
  loyal of your users are being prompted to rate you on the app store.
- If you leave this at a value of -1, then this won't be a criteria
+ If you leave this at a value of -1, then this won't be a criterion
  used for rating. To tell Appirater that the user has performed
  a significant event, call the method:
  [Appirater userDidSignificantEvent:];
@@ -203,6 +214,16 @@ extern NSString *const kAppiraterReminderRequestDate;
  looks and making sure the link to your app's review page works.
  */
 + (void) setDebug:(BOOL)debug;
+
+/*
+ Set the delegate if you want to know when Appirater does something
+ */
++ (void)setDelegate:(id<AppiraterDelegate>)delegate;
+
+/*
+ Set whether or not Appirater uses animation (currently respected when pushing modal StoreKit rating VCs).
+ */
++ (void)setUsesAnimation:(BOOL)animation;
 
 @end
 
